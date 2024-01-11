@@ -2,7 +2,7 @@ package cache
 
 import (
 	"errors"
-	"fmt"
+	"sync"
 	"time"
 )
 
@@ -12,6 +12,7 @@ type Cache struct {
 		expiration time.Duration
 	}
 	jobChannel chan string
+	mutex      sync.RWMutex
 }
 
 func NewCache(workerCount int) *Cache {
@@ -31,6 +32,9 @@ func NewCache(workerCount int) *Cache {
 }
 
 func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	c.items[key] = struct {
 		value      interface{}
 		expiration time.Duration
@@ -46,29 +50,41 @@ func (c *Cache) worker() {
 }
 
 func (c *Cache) expireAfter(key string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	ttl := c.items[key].expiration
 
 	<-time.After(ttl)
 	c.Delete(key)
 }
 
-func (c *Cache) Get(key string) error {
+func (c *Cache) Get(key string) (*Cache, error) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
 	item, ok := c.items[key]
 	if !ok {
-		err := errors.New("KEY_NOT_FOUND")
-		fmt.Println(err)
-		return err
+		return nil, errors.New("KEY_NOT_FOUND")
 	}
-	fmt.Println(item.value)
-	return nil
+
+	return &Cache{
+		items: map[string]struct {
+			value      interface{}
+			expiration time.Duration
+		}{key: item},
+		jobChannel: make(chan string),
+		mutex:      sync.RWMutex{},
+	}, nil
 }
 
 func (c *Cache) Update(key string, newValue interface{}) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	_, ok := c.items[key]
 	if !ok {
-		err := errors.New("KEY_NOT_FOUND")
-		fmt.Println(err)
-		return err
+		return errors.New("KEY_NOT_FOUND")
 	}
 
 	c.items[key] = struct {
@@ -80,13 +96,18 @@ func (c *Cache) Update(key string, newValue interface{}) error {
 }
 
 func (c *Cache) Delete(key string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	_, ok := c.items[key]
 	if !ok {
-		err := errors.New("KEY_NOT_FOUND")
-		fmt.Println(err)
-		return err
+		return errors.New("KEY_NOT_FOUND")
 	}
-	delete(c.items, key)
 
+	delete(c.items, key)
 	return nil
+}
+
+func (c *Cache) Close() {
+	close(c.jobChannel)
 }
