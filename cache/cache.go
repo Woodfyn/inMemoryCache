@@ -59,7 +59,7 @@ func (c *Cache) expireAfter(key string) {
 	c.Delete(key)
 }
 
-func (c *Cache) Get(key string) (*Cache, error) {
+func (c *Cache) Get(key string) (interface{}, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -68,14 +68,7 @@ func (c *Cache) Get(key string) (*Cache, error) {
 		return nil, errors.New("KEY_NOT_FOUND")
 	}
 
-	return &Cache{
-		items: map[string]struct {
-			value      interface{}
-			expiration time.Duration
-		}{key: item},
-		jobChannel: make(chan string),
-		mutex:      sync.RWMutex{},
-	}, nil
+	return item.value, nil
 }
 
 func (c *Cache) Update(key string, newValue interface{}) error {
