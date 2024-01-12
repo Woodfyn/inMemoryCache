@@ -2,7 +2,6 @@ package cache
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -64,9 +63,7 @@ func (c *Cache) Get(key int) (interface{}, error) {
 func (c *Cache) Update(key int, newValue interface{}) error {
 	_, ok := c.items[key]
 	if !ok {
-		err := errors.New("KEY_NOT_FOUND")
-		fmt.Println(err)
-		return err
+		return errors.New("KEY_NOT_FOUND")
 	}
 
 	c.items[key] = struct {
@@ -80,11 +77,13 @@ func (c *Cache) Update(key int, newValue interface{}) error {
 func (c *Cache) Delete(key int) error {
 	_, ok := c.items[key]
 	if !ok {
-		err := errors.New("KEY_NOT_FOUND")
-		fmt.Println(err)
-		return err
+		return errors.New("KEY_NOT_FOUND")
 	}
-	delete(c.items, key)
 
+	delete(c.items, key)
 	return nil
+}
+
+func (c *Cache) Close() {
+	close(c.jobChannel)
 }
