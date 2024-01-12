@@ -7,21 +7,21 @@ import (
 )
 
 type Cache struct {
-	items map[string]struct {
+	items map[int]struct {
 		value      interface{}
 		expiration time.Duration
 	}
-	jobChannel chan string
+	jobChannel chan int
 	mutex      sync.RWMutex
 }
 
 func NewCache(workerCount int) *Cache {
 	c := &Cache{
-		items: make(map[string]struct {
+		items: make(map[int]struct {
 			value      interface{}
 			expiration time.Duration
 		}),
-		jobChannel: make(chan string),
+		jobChannel: make(chan int),
 	}
 
 	for i := 0; i < workerCount; i++ {
@@ -31,7 +31,7 @@ func NewCache(workerCount int) *Cache {
 	return c
 }
 
-func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
+func (c *Cache) Set(key int, value interface{}, ttl time.Duration) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -49,7 +49,7 @@ func (c *Cache) worker() {
 	}
 }
 
-func (c *Cache) expireAfter(key string) {
+func (c *Cache) expireAfter(key int) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -59,7 +59,7 @@ func (c *Cache) expireAfter(key string) {
 	c.Delete(key)
 }
 
-func (c *Cache) Get(key string) (interface{}, error) {
+func (c *Cache) Get(key int) (interface{}, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -71,7 +71,7 @@ func (c *Cache) Get(key string) (interface{}, error) {
 	return item.value, nil
 }
 
-func (c *Cache) Update(key string, newValue interface{}) error {
+func (c *Cache) Update(key int, newValue interface{}) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -88,7 +88,7 @@ func (c *Cache) Update(key string, newValue interface{}) error {
 	return nil
 }
 
-func (c *Cache) Delete(key string) error {
+func (c *Cache) Delete(key int) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
