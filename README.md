@@ -8,7 +8,7 @@
 	    "fmt"
 	    "time"
 
-	    "github.com/Woodfyn/inMemoryCache/cache/cache"
+	    "github.com/Woodfyn/inMemoryCache/cache"
     )
 
     func main() {
